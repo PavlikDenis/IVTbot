@@ -5,20 +5,20 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
-# ========= НАСТРОЙКИ =========
+#НАСТРОЙКИ
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
-TARGET_CHAT_ID = -1003400255732
-TARGET_TOPIC_ID = 8787
+TARGET_CHAT_ID = -1002877541973
+TARGET_TOPIC_ID = 52933
 
 DB_NAME = "casino_stats.db"
 POINTS_BY_VALUE = {i: 1 for i in range(1, 65)}
 
-# ========= ЛОГИ =========
+#ЛОГИ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ========= БАЗА =========
+#БАЗА
 conn = sqlite3.connect(DB_NAME, check_same_thread=False)
 cur = conn.cursor()
 
@@ -43,8 +43,13 @@ def init_db():
     """)
     conn.commit()
 
+def is_allowed_topic(message: types.Message):
+    return (
+        message.chat.id == TARGET_CHAT_ID and
+        message.message_thread_id == TARGET_TOPIC_ID
+    )
 
-# ========= ФУНКЦИИ =========
+#ФУНКЦИИ
 def add_user(user: types.User):
     cur.execute("""
     INSERT INTO users(user_id, first_name, username)
@@ -89,7 +94,7 @@ def get_user_stats(user_id):
     return cur.fetchall()
 
 
-# ========= ОБРАБОТЧИКИ =========
+#ОБРАБОТЧИКИ
 async def handle_dice(message: types.Message):
     # Проверяем чат и топик
     if message.chat.id != TARGET_CHAT_ID:
@@ -104,9 +109,7 @@ async def handle_dice(message: types.Message):
 
     if message.from_user:  # безопасная проверка
         add_user(message.from_user)
-        if (value == 7):
-            add_spin(message.from_user.id, value, points*5)
-        elif (value == 22):
+        if (value == 22):
             add_spin(message.from_user.id, value, points*5)
         elif (value == 1):
             add_spin(message.from_user.id, value, points*10)
@@ -119,8 +122,10 @@ async def handle_dice(message: types.Message):
         logger.info(f"{message.from_user.id} rolled {value}")
 
 
-# ======== КОМАНДЫ ========
+#КОМАНДЫ
 async def cmd_leaderboard(message: types.Message):
+    if not is_allowed_topic(message):
+        return
     data = get_leaderboard()
     text = "🏆 ТОП ИГРОКОВ\n\n" if data else "Нет данных."
     if data:
@@ -138,6 +143,8 @@ async def cmd_leaderboard(message: types.Message):
 
 
 async def cmd_mystats(message: types.Message):
+    if not is_allowed_topic(message):
+        return
     if not message.from_user:
         await message.bot.send_message(
             chat_id=message.chat.id,
@@ -161,9 +168,7 @@ async def cmd_mystats(message: types.Message):
     for value, count, points in stats:
         total_spins += count
         total_points += points
-        if (value == 7):
-            text += f"🍒🍒🍒 → {count} раз ({points} очков)\n"
-        elif (value == 22):
+        if (value == 22):
             text += f"🍇🍇🍇 → {count} раз ({points} очков)\n"
         elif (value == 1):
             text += f"🍾🍾🍾 → {count} раз ({points} очков)\n"
@@ -199,9 +204,11 @@ async def cmd_chatid(message: types.Message):
 
 # ======== КОМАНДА /help ========
 async def cmd_help(message: types.Message):
+    if not is_allowed_topic(message):
+        return
     help_text = (
         "📖 Доступные команды бота:\n\n"
-        "/leaderboard — показать топ игроков по очкам 🎰\n"
+        "/Топ — показать топ игроков по очкам 🎰\n"
         "/mystats — показать вашу статистику вращений 🎰\n"
         "/topicid — показать ID текущей темы форума 🏷️\n"
         "/chatid — показать ID текущего чата 💬\n"
@@ -227,6 +234,7 @@ async def main():
     dp = Dispatcher()
 
     # --- РЕГИСТРАЦИЯ КОМАНД ---
+    dp.message.register(cmd_leaderboard, Command(commands=["Топ"]))
     dp.message.register(cmd_leaderboard, Command(commands=["leaderboard"]))
     dp.message.register(cmd_mystats, Command(commands=["mystats"]))
     dp.message.register(cmd_topicid, Command(commands=["topicid"]))
