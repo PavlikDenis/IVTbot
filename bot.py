@@ -3,12 +3,14 @@ import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from bd import Database
+from dotenv import load_dotenv
 import os
 
-TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID")
-TARGET_TOPIC_ID = os.getenv("TARGET_TOPIC_ID")
+load_dotenv()
+TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID"))
+TARGET_TOPIC_ID = int(os.getenv("TARGET_TOPIC_ID"))
 
-if not TARGET_CHAT_ID or TARGET_TOPIC_ID:
+if not TARGET_CHAT_ID or not TARGET_TOPIC_ID:
     raise Exception("TARGET_CHAT_ID and TARGET_TOPIC_ID must be set")
 
 POINTS_BY_VALUE = POINTS_BY_VALUE = {i: 1 for i in range(1, 65)}
@@ -182,10 +184,19 @@ async def cmd_help(message: types.Message):
         "/help — показать это сообщение с командами ℹ️\n"
     )
 
+    keyboard = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text="🎰 Крутить", callback_data="spin")],
+            [types.InlineKeyboardButton(text="🏆 Топ игроков", callback_data="leaderboard")],
+            [types.InlineKeyboardButton(text="📊 Моя статистика", callback_data="mystats")],
+        ]
+    )
+
     await message.bot.send_message(
         chat_id=message.chat.id,
         text=help_text,
-        message_thread_id=message.message_thread_id
+        message_thread_id=message.message_thread_id,
+        reply_markup=keyboard
     )
 
 
