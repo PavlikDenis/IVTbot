@@ -1,9 +1,9 @@
 # КАЗИК БОТ
 ## Requirements
 ```bash
-pip install poetry
+go mod init название
 ```
 ## Run bot
 ```bash
-poetry run python main.py
+go run название.go
 ```
